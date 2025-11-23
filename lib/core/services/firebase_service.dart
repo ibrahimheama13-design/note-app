@@ -1,0 +1,18 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+
+class FirebaseService {
+  static final FirebaseAuth _auth = FirebaseAuth.instance;
+  static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  static FirebaseAuth get auth => _auth;
+  static FirebaseFirestore get firestore => _firestore;
+
+  static Stream<User?> get authStateChanges => _auth.authStateChanges();
+  static User? get currentUser => _auth.currentUser;
+
+  static Future<void> initialize() async {
+    await Firebase.initializeApp();
+  }
+}
