@@ -24,7 +24,9 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
-    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
   } catch (e) {
     debugPrint('خطأ في تهيئة Firebase: $e');
     runApp(
@@ -103,18 +105,48 @@ class MyApp extends StatelessWidget {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: Colors.blue,
-              brightness: Brightness.light,
-            ).copyWith(surface: Colors.white),
+            colorScheme:
+                ColorScheme.fromSeed(
+                  seedColor: const Color(0xFF667eea),
+                  brightness: Brightness.light,
+                ).copyWith(
+                  surface: const Color(0xFFf8f9fa),
+                  primary: const Color(0xFF667eea),
+                  secondary: const Color(0xFF764ba2),
+                  tertiary: const Color(0xFFf093fb),
+                ),
             useMaterial3: true,
+            appBarTheme: const AppBarTheme(
+              centerTitle: true,
+              elevation: 0,
+              backgroundColor: Color(0xFFf8f9fa),
+              foregroundColor: Color(0xFF667eea),
+            ),
+            floatingActionButtonTheme: const FloatingActionButtonThemeData(
+              elevation: 8,
+            ),
           ),
           darkTheme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: Colors.blue,
-              brightness: Brightness.dark,
-            ).copyWith(surface: Colors.grey[900]),
+            colorScheme:
+                ColorScheme.fromSeed(
+                  seedColor: const Color(0xFF667eea),
+                  brightness: Brightness.dark,
+                ).copyWith(
+                  surface: const Color(0xFF0f0e17),
+                  primary: const Color(0xFF667eea),
+                  secondary: const Color(0xFF764ba2),
+                  tertiary: const Color(0xFFbb86fc),
+                ),
             useMaterial3: true,
+            appBarTheme: const AppBarTheme(
+              centerTitle: true,
+              elevation: 0,
+              backgroundColor: Color(0xFF0f0e17),
+              foregroundColor: Color(0xFFbb86fc),
+            ),
+            floatingActionButtonTheme: const FloatingActionButtonThemeData(
+              elevation: 8,
+            ),
           ),
           themeMode: themeProvider.isDark ? ThemeMode.dark : ThemeMode.light,
           locale: localeProvider.locale,
@@ -135,14 +167,24 @@ class MyApp extends StatelessWidget {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                            const Icon(
+                              Icons.error_outline,
+                              size: 64,
+                              color: Colors.red,
+                            ),
                             const SizedBox(height: 16),
                             const Text(
                               'خطأ في الاتصال',
-                              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                             const SizedBox(height: 8),
-                            Text('${snapshot.error}', textAlign: TextAlign.center),
+                            Text(
+                              '${snapshot.error}',
+                              textAlign: TextAlign.center,
+                            ),
                           ],
                         ),
                       ),
