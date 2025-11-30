@@ -1,0 +1,20 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Notes collection rules
+    match /notes/{noteId} {
+      // Allow read if user is authenticated and owns the note
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+
+      // Allow create if user is authenticated and sets their own userId
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+
+      // Allow update if user is authenticated and owns the note
+      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
+
+      // Allow delete if user is authenticated and owns the note
+      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+  }
+}

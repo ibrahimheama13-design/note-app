@@ -8,10 +8,53 @@ import '../../../../core/providers/theme_provider.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../domain/entities/note.dart';
 import '../providers/notes_provider.dart';
-import '../widgets/note_dialog.dart';
+import 'note_edit_screen.dart';
+import 'word_note_edit_screen.dart';
 
-class NotesScreen extends StatelessWidget {
+class NotesScreen extends StatefulWidget {
   const NotesScreen({super.key});
+
+  @override
+  State<NotesScreen> createState() => _NotesScreenState();
+}
+
+class _NotesScreenState extends State<NotesScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  bool _isSearching = false;
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _startSearch() {
+    setState(() {
+      _isSearching = true;
+    });
+  }
+
+  void _stopSearch() {
+    setState(() {
+      _isSearching = false;
+      _searchQuery = '';
+      _searchController.clear();
+    });
+  }
+
+  void _updateSearchQuery(String query) {
+    setState(() {
+      _searchQuery = query.toLowerCase();
+    });
+  }
+
+  List<Note> _filterNotes(List<Note> notes) {
+    if (_searchQuery.isEmpty) return notes;
+    return notes
+        .where((note) => note.title.toLowerCase().startsWith(_searchQuery))
+        .toList();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -58,29 +101,116 @@ class NotesScreen extends StatelessWidget {
             ),
           ),
         ),
-        title: ShaderMask(
-          shaderCallback: (bounds) => LinearGradient(
-            colors: isDark
-                ? [
-                    const Color(0xFFe0b3ff),
-                    const Color(0xFFc084fc),
-                    const Color(0xFFa855f7),
-                  ]
-                : [
-                    const Color(0xFF6366f1),
-                    const Color(0xFF8b5cf6),
-                    const Color(0xFF9333ea),
-                  ],
-          ).createShader(bounds),
-          child: Text(
-            loc.t('my_notes'),
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+        title: _isSearching
+            ? Container(
+                height: 45,
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : Colors.white.withValues(alpha: 0.9),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFF667eea).withValues(alpha: 0.3),
+                    width: 1.5,
+                  ),
+                ),
+                child: TextField(
+                  controller: _searchController,
+                  autofocus: true,
+                  onChanged: _updateSearchQuery,
+                  style: TextStyle(
+                    color: isDark ? Colors.white : Colors.black87,
+                    fontSize: 16,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: loc.t('search_by_title'),
+                    hintStyle: TextStyle(
+                      color: isDark ? Colors.white54 : Colors.black45,
+                      fontSize: 15,
+                    ),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    prefixIcon: ShaderMask(
+                      shaderCallback: (bounds) => const LinearGradient(
+                        colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                      ).createShader(bounds),
+                      child: Icon(
+                        Icons.search_rounded,
+                        color: Colors.white,
+                        size: 22,
+                      ),
+                    ),
+                  ),
+                ),
+              )
+            : ShaderMask(
+                shaderCallback: (bounds) => LinearGradient(
+                  colors: isDark
+                      ? [
+                          const Color(0xFFe0b3ff),
+                          const Color(0xFFc084fc),
+                          const Color(0xFFa855f7),
+                        ]
+                      : [
+                          const Color(0xFF6366f1),
+                          const Color(0xFF8b5cf6),
+                          const Color(0xFF9333ea),
+                        ],
+                ).createShader(bounds),
+                child: Text(
+                  loc.t('my_notes'),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+        actions: [
+          // Search button
+          GestureDetector(
+            onTap: () {
+              if (_isSearching) {
+                _stopSearch();
+              } else {
+                _startSearch();
+              }
+            },
+            child: Container(
+              width: 42,
+              height: 42,
+              margin: const EdgeInsets.only(right: 4),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: _isSearching
+                      ? [const Color(0xFFef5350), const Color(0xFFe53935)]
+                      : isDark
+                          ? [const Color(0xFF667eea), const Color(0xFF764ba2)]
+                          : [const Color(0xFF667eea), const Color(0xFF8b5cf6)],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: (_isSearching
+                            ? Colors.red
+                            : const Color(0xFF667eea))
+                        .withValues(alpha: 0.4),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Icon(
+                _isSearching ? Icons.close_rounded : Icons.search_rounded,
+                color: Colors.white,
+                size: 22,
+              ),
             ),
           ),
-        ),
-        actions: [
           GestureDetector(
             onTap: () => _showSettingsSheet(context),
             child: Padding(
@@ -233,9 +363,10 @@ class NotesScreen extends StatelessWidget {
             );
           }
 
-          final notes = snapshot.data ?? [];
+          final allNotes = snapshot.data ?? [];
+          final notes = _filterNotes(allNotes);
 
-          if (notes.isEmpty) {
+          if (allNotes.isEmpty) {
             return Center(
               child: Container(
                 padding: const EdgeInsets.all(32),
@@ -320,6 +451,86 @@ class NotesScreen extends StatelessWidget {
             );
           }
 
+          // Show "no results" when searching but no matches found
+          if (notes.isEmpty && _searchQuery.isNotEmpty) {
+            return Center(
+              child: Container(
+                padding: const EdgeInsets.all(32),
+                margin: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: isDark
+                        ? [
+                            const Color(0xFFff9800).withValues(alpha: 0.1),
+                            const Color(0xFFff5722).withValues(alpha: 0.1),
+                          ]
+                        : [
+                            const Color(0xFFff9800).withValues(alpha: 0.05),
+                            const Color(0xFFff5722).withValues(alpha: 0.05),
+                          ],
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    width: 2,
+                    color: const Color(0xFFff9800).withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color(0xFFff9800),
+                            Color(0xFFff5722),
+                          ],
+                        ),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFff9800).withValues(alpha: 0.5),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.search_off_rounded,
+                        size: 48,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ShaderMask(
+                      shaderCallback: (bounds) => const LinearGradient(
+                        colors: [Color(0xFFff9800), Color(0xFFff5722)],
+                      ).createShader(bounds),
+                      child: Text(
+                        loc.t('no_search_results'),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '"$_searchQuery"',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: isDark ? Colors.white54 : Colors.black45,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
           return ListView.builder(
             padding: const EdgeInsets.all(12.0),
             itemCount: notes.length,
@@ -360,14 +571,14 @@ class NotesScreen extends StatelessWidget {
                   ),
                 ),
                 direction: DismissDirection.endToStart,
-                confirmDismiss: (_) => _confirmDelete(context, isDark),
+                confirmDismiss: (_) => _confirmDelete(context, isDark, loc),
                 onDismissed: (_) async {
                   try {
                     await notesProvider.deleteNote(note.id);
                     if (context.mounted) {
                       _showGradientSnackBar(
                         context,
-                        'تم حذف الملاحظة',
+                        loc.t('note_deleted'),
                         isDark,
                         isError: false,
                       );
@@ -376,7 +587,7 @@ class NotesScreen extends StatelessWidget {
                     if (context.mounted) {
                       _showGradientSnackBar(
                         context,
-                        'خطأ في حذف الملاحظة: ${e.toString()}',
+                        '${loc.t('delete_error')}: ${e.toString()}',
                         isDark,
                         isError: true,
                       );
@@ -392,24 +603,37 @@ class NotesScreen extends StatelessWidget {
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: isDark
-                          ? [
-                              const Color(0xFF7c3aed).withValues(alpha: 0.20),
-                              const Color(0xFF9333ea).withValues(alpha: 0.18),
-                              const Color(0xFFa855f7).withValues(alpha: 0.15),
-                            ]
-                          : [
-                              const Color(0xFF818cf8).withValues(alpha: 0.12),
-                              const Color(0xFFa78bfa).withValues(alpha: 0.10),
-                              const Color(0xFFc084fc).withValues(alpha: 0.08),
-                            ],
+                      colors: (note.noteType == NoteType.word || note.pages.isNotEmpty)
+                          ? (isDark
+                              ? [
+                                  const Color(0xFF4CAF50).withValues(alpha: 0.20),
+                                  const Color(0xFF2E7D32).withValues(alpha: 0.18),
+                                  const Color(0xFF1B5E20).withValues(alpha: 0.15),
+                                ]
+                              : [
+                                  const Color(0xFF4CAF50).withValues(alpha: 0.12),
+                                  const Color(0xFF66BB6A).withValues(alpha: 0.10),
+                                  const Color(0xFF81C784).withValues(alpha: 0.08),
+                                ])
+                          : (isDark
+                              ? [
+                                  const Color(0xFF7c3aed).withValues(alpha: 0.20),
+                                  const Color(0xFF9333ea).withValues(alpha: 0.18),
+                                  const Color(0xFFa855f7).withValues(alpha: 0.15),
+                                ]
+                              : [
+                                  const Color(0xFF818cf8).withValues(alpha: 0.12),
+                                  const Color(0xFFa78bfa).withValues(alpha: 0.10),
+                                  const Color(0xFFc084fc).withValues(alpha: 0.08),
+                                ]),
                     ),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(width: 0, color: Colors.transparent),
                     boxShadow: [
                       BoxShadow(
-                        color: (isDark ? Colors.purple : Colors.blue)
-                            .withValues(alpha: 0.2),
+                        color: (note.noteType == NoteType.word || note.pages.isNotEmpty)
+                            ? Colors.green.withValues(alpha: 0.2)
+                            : (isDark ? Colors.purple : Colors.blue).withValues(alpha: 0.2),
                         blurRadius: 12,
                         offset: const Offset(0, 4),
                       ),
@@ -422,17 +646,29 @@ class NotesScreen extends StatelessWidget {
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: isDark
-                          ? [
-                              const Color(0xFF8b5cf6).withValues(alpha: 0.7),
-                              const Color(0xFFa855f7).withValues(alpha: 0.6),
-                              const Color(0xFFc084fc).withValues(alpha: 0.5),
-                            ]
-                          : [
-                              const Color(0xFF818cf8).withValues(alpha: 0.5),
-                              const Color(0xFF9333ea).withValues(alpha: 0.5),
-                              const Color(0xFFc084fc).withValues(alpha: 0.4),
-                            ],
+                      colors: (note.noteType == NoteType.word || note.pages.isNotEmpty)
+                          ? (isDark
+                              ? [
+                                  const Color(0xFF4CAF50).withValues(alpha: 0.7),
+                                  const Color(0xFF66BB6A).withValues(alpha: 0.6),
+                                  const Color(0xFF81C784).withValues(alpha: 0.5),
+                                ]
+                              : [
+                                  const Color(0xFF4CAF50).withValues(alpha: 0.5),
+                                  const Color(0xFF66BB6A).withValues(alpha: 0.5),
+                                  const Color(0xFF81C784).withValues(alpha: 0.4),
+                                ])
+                          : (isDark
+                              ? [
+                                  const Color(0xFF8b5cf6).withValues(alpha: 0.7),
+                                  const Color(0xFFa855f7).withValues(alpha: 0.6),
+                                  const Color(0xFFc084fc).withValues(alpha: 0.5),
+                                ]
+                              : [
+                                  const Color(0xFF818cf8).withValues(alpha: 0.5),
+                                  const Color(0xFF9333ea).withValues(alpha: 0.5),
+                                  const Color(0xFFc084fc).withValues(alpha: 0.4),
+                                ]),
                     ),
                   ),
                   child: Container(
@@ -457,7 +693,7 @@ class NotesScreen extends StatelessWidget {
                     ),
                     child: Stack(
                       children: [
-                        // Note number badge with gradient
+                        // Note badge - icon for Word Note, number for Standard
                         Positioned(
                           top: 12,
                           left: 12,
@@ -468,38 +704,50 @@ class NotesScreen extends StatelessWidget {
                               gradient: LinearGradient(
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
-                                colors: isDark
+                                colors: (note.noteType == NoteType.word || note.pages.isNotEmpty)
                                     ? [
-                                        const Color(0xFF8b5cf6),
-                                        const Color(0xFF7c3aed),
-                                        const Color(0xFF6d28d9),
+                                        const Color(0xFF4CAF50),
+                                        const Color(0xFF2E7D32),
+                                        const Color(0xFF1B5E20),
                                       ]
-                                    : [
-                                        const Color(0xFF818cf8),
-                                        const Color(0xFF6366f1),
-                                        const Color(0xFF4f46e5),
-                                      ],
+                                    : (isDark
+                                        ? [
+                                            const Color(0xFF8b5cf6),
+                                            const Color(0xFF7c3aed),
+                                            const Color(0xFF6d28d9),
+                                          ]
+                                        : [
+                                            const Color(0xFF818cf8),
+                                            const Color(0xFF6366f1),
+                                            const Color(0xFF4f46e5),
+                                          ]),
                               ),
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(
-                                    0xFF8b5cf6,
-                                  ).withValues(alpha: 0.6),
+                                  color: (note.noteType == NoteType.word || note.pages.isNotEmpty)
+                                      ? Colors.green.withValues(alpha: 0.6)
+                                      : const Color(0xFF8b5cf6).withValues(alpha: 0.6),
                                   blurRadius: 12,
                                   offset: const Offset(0, 4),
                                 ),
                               ],
                             ),
                             child: Center(
-                              child: Text(
-                                '$noteNumber',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                              child: (note.noteType == NoteType.word || note.pages.isNotEmpty)
+                                  ? const Icon(
+                                      Icons.description_rounded,
+                                      color: Colors.white,
+                                      size: 20,
+                                    )
+                                  : Text(
+                                      '$noteNumber',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
                             ),
                           ),
                         ),
@@ -551,6 +799,7 @@ class NotesScreen extends StatelessWidget {
                                   final confirm = await _confirmDelete(
                                     context,
                                     isDark,
+                                    loc,
                                   );
                                   if (confirm && context.mounted) {
                                     try {
@@ -558,7 +807,7 @@ class NotesScreen extends StatelessWidget {
                                       if (context.mounted) {
                                         _showGradientSnackBar(
                                           context,
-                                          'تم حذف الملاحظة',
+                                          loc.t('note_deleted'),
                                           isDark,
                                           isError: false,
                                         );
@@ -567,7 +816,7 @@ class NotesScreen extends StatelessWidget {
                                       if (context.mounted) {
                                         _showGradientSnackBar(
                                           context,
-                                          'خطأ في حذف الملاحظة',
+                                          loc.t('delete_error'),
                                           isDark,
                                           isError: true,
                                         );
@@ -578,14 +827,14 @@ class NotesScreen extends StatelessWidget {
                                   await Clipboard.setData(
                                     ClipboardData(
                                       text: note.title.isEmpty
-                                          ? 'بدون عنوان'
+                                          ? loc.t('title')
                                           : note.title,
                                     ),
                                   );
                                   if (context.mounted) {
                                     _showGradientSnackBar(
                                       context,
-                                      'تم نسخ العنوان',
+                                      loc.t('title_copied'),
                                       isDark,
                                       isError: false,
                                     );
@@ -597,7 +846,7 @@ class NotesScreen extends StatelessWidget {
                                   if (context.mounted) {
                                     _showGradientSnackBar(
                                       context,
-                                      'تم نسخ المحتوى',
+                                      loc.t('content_copied'),
                                       isDark,
                                       isError: false,
                                     );
@@ -630,7 +879,7 @@ class NotesScreen extends StatelessWidget {
                                       ),
                                       const SizedBox(width: 12),
                                       Text(
-                                        'حذف الملاحظة',
+                                        loc.t('delete_note'),
                                         style: TextStyle(
                                           color: isDark
                                               ? Colors.white
@@ -671,7 +920,7 @@ class NotesScreen extends StatelessWidget {
                                       ),
                                       const SizedBox(width: 12),
                                       Text(
-                                        'نسخ العنوان',
+                                        loc.t('copy_title'),
                                         style: TextStyle(
                                           color: isDark
                                               ? Colors.white
@@ -712,7 +961,7 @@ class NotesScreen extends StatelessWidget {
                                       ),
                                       const SizedBox(width: 12),
                                       Text(
-                                        'نسخ المحتوى',
+                                        loc.t('copy_content'),
                                         style: TextStyle(
                                           color: isDark
                                               ? Colors.white
@@ -737,50 +986,69 @@ class NotesScreen extends StatelessWidget {
                             bottom: 16,
                           ),
                           child: InkWell(
-                            onTap: () =>
-                                _showNoteDialog(context, notesProvider, note),
+                            onTap: () => _openNote(context, note),
                             borderRadius: BorderRadius.circular(17),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                ShaderMask(
-                                  shaderCallback: (bounds) => LinearGradient(
-                                    colors: isDark
-                                        ? [
-                                            const Color(0xFFbb86fc),
-                                            const Color(0xFFf093fb),
-                                          ]
-                                        : [
-                                            const Color(0xFF5e35b1),
-                                            const Color(0xFF7b1fa2),
-                                          ],
-                                  ).createShader(bounds),
-                                  child: Text(
-                                    note.title.isEmpty
-                                        ? 'بدون عنوان'
-                                        : note.title,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 18,
-                                      color: Colors.white,
+                                // Word Note: Show content only (no title/content separation)
+                                if (note.noteType == NoteType.word || note.pages.isNotEmpty) ...[
+                                  // Page count for Word Note
+                                  if (note.pages.isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 8),
+                                      child: Text(
+                                        '${note.pages.length} ${note.pages.length == 1 ? 'صفحة' : 'صفحات'}',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                          color: isDark ? Colors.green.shade300 : Colors.green.shade700,
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                ),
-                                if (note.content.isNotEmpty) ...[
-                                  const SizedBox(height: 8),
+                                  // Content preview from pages
                                   Text(
-                                    note.content,
-                                    maxLines: 3,
+                                    _getWordNotePreview(note),
+                                    maxLines: 4,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
                                       fontSize: 16,
                                       height: 1.5,
                                       fontWeight: FontWeight.w600,
-                                      color: isDark
-                                          ? const Color(0xFFffa726)
-                                          : const Color(0xFFf57c00),
+                                      color: isDark ? const Color(0xFF81C784) : const Color(0xFF4CAF50),
                                     ),
                                   ),
+                                ] else ...[
+                                  // Standard Note: Show title + content
+                                  ShaderMask(
+                                    shaderCallback: (bounds) => LinearGradient(
+                                      colors: isDark
+                                          ? [const Color(0xFFbb86fc), const Color(0xFFf093fb)]
+                                          : [const Color(0xFF5e35b1), const Color(0xFF7b1fa2)],
+                                    ).createShader(bounds),
+                                    child: Text(
+                                      note.title.isEmpty ? 'بدون عنوان' : note.title,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                  if (note.content.isNotEmpty) ...[
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      note.content,
+                                      maxLines: 3,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        height: 1.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDark ? const Color(0xFFffa726) : const Color(0xFFf57c00),
+                                      ),
+                                    ),
+                                  ],
                                 ],
                                 const SizedBox(height: 8),
                                 Row(
@@ -884,7 +1152,7 @@ class NotesScreen extends StatelessWidget {
           color: Colors.transparent,
           child: InkWell(
             borderRadius: BorderRadius.circular(34),
-            onTap: () => _showNoteDialog(context, notesProvider, null),
+            onTap: () => _showNoteTypeSelector(context),
             child: const Icon(Icons.add_rounded, color: Colors.white, size: 36),
           ),
         ),
@@ -899,7 +1167,7 @@ class NotesScreen extends StatelessWidget {
     return name.trim().characters.first.toUpperCase();
   }
 
-  Future<bool> _confirmDelete(BuildContext context, bool isDark) async {
+  Future<bool> _confirmDelete(BuildContext context, bool isDark, AppLocalizations loc) async {
     final result = await showDialog<bool>(
       context: context,
       barrierColor: Colors.black54,
@@ -946,9 +1214,9 @@ class NotesScreen extends StatelessWidget {
                 shaderCallback: (bounds) => const LinearGradient(
                   colors: [Color(0xFFef5350), Color(0xFFe53935)],
                 ).createShader(bounds),
-                child: const Text(
-                  'تأكيد الحذف',
-                  style: TextStyle(
+                child: Text(
+                  loc.t('confirm_delete'),
+                  style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
@@ -957,7 +1225,7 @@ class NotesScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                'هل أنت متأكد من حذف هذه الملاحظة؟',
+                loc.t('delete_confirm_message'),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,
@@ -981,10 +1249,10 @@ class NotesScreen extends StatelessWidget {
                         child: InkWell(
                           borderRadius: BorderRadius.circular(14),
                           onTap: () => Navigator.of(ctx).pop(false),
-                          child: const Center(
+                          child: Center(
                             child: Text(
-                              'إلغاء',
-                              style: TextStyle(
+                              loc.t('cancel'),
+                              style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
@@ -1017,10 +1285,10 @@ class NotesScreen extends StatelessWidget {
                         child: InkWell(
                           borderRadius: BorderRadius.circular(14),
                           onTap: () => Navigator.of(ctx).pop(true),
-                          child: const Center(
+                          child: Center(
                             child: Text(
-                              'حذف',
-                              style: TextStyle(
+                              loc.t('delete'),
+                              style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
@@ -1108,13 +1376,12 @@ class NotesScreen extends StatelessWidget {
   }
 
   void _showSettingsSheet(BuildContext context) {
-    final loc = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     // Capture providers BEFORE showing modal to avoid deactivated widget exception
     final themeProvider = context.read<ThemeProvider>();
     final localeProvider = context.read<LocaleProvider>();
     final authProvider = context.read<AuthProvider>();
+    final loc = AppLocalizations.fromLocale(localeProvider.locale);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     showModalBottomSheet(
       context: context,
@@ -1213,7 +1480,11 @@ class NotesScreen extends StatelessWidget {
                       ),
                       trailing: Switch(
                         value: themeProvider.isDark,
-                        onChanged: (_) => themeProvider.toggleTheme(),
+                        onChanged: (_) {
+                          // Close bottom sheet before changing theme
+                          Navigator.of(context).popUntil((route) => route.isFirst);
+                          Future.microtask(() => themeProvider.toggleTheme());
+                        },
                         activeTrackColor: const Color(0xFF667eea),
                         activeThumbColor: Colors.white,
                       ),
@@ -1333,8 +1604,9 @@ class NotesScreen extends StatelessWidget {
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       onTap: () {
-                        Navigator.pop(ctx);
-                        authProvider.signOut();
+                        // Close all bottom sheets before signing out
+                        Navigator.of(context).popUntil((route) => route.isFirst);
+                        Future.microtask(() => authProvider.signOut());
                       },
                     ),
                   ),
@@ -1352,7 +1624,8 @@ class NotesScreen extends StatelessWidget {
     BuildContext context,
     LocaleProvider localeProvider,
   ) {
-    final loc = AppLocalizations.of(context);
+    // Capture values BEFORE showing modal to avoid deactivated widget exception
+    final loc = AppLocalizations.fromLocale(localeProvider.locale);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     showModalBottomSheet(
@@ -1421,7 +1694,8 @@ class NotesScreen extends StatelessWidget {
                   icon: '🇸🇦',
                   isDark: isDark,
                   onTap: () {
-                    Navigator.pop(ctx);
+                    // Close all bottom sheets before changing locale
+                    Navigator.of(context).popUntil((route) => route.isFirst);
                     Future.microtask(
                       () => localeProvider.setLocale(const Locale('ar')),
                     );
@@ -1435,7 +1709,8 @@ class NotesScreen extends StatelessWidget {
                   icon: '🇬🇧',
                   isDark: isDark,
                   onTap: () {
-                    Navigator.pop(ctx);
+                    // Close all bottom sheets before changing locale
+                    Navigator.of(context).popUntil((route) => route.isFirst);
                     Future.microtask(
                       () => localeProvider.setLocale(const Locale('en')),
                     );
@@ -1449,7 +1724,8 @@ class NotesScreen extends StatelessWidget {
                   icon: '🇫🇷',
                   isDark: isDark,
                   onTap: () {
-                    Navigator.pop(ctx);
+                    // Close all bottom sheets before changing locale
+                    Navigator.of(context).popUntil((route) => route.isFirst);
                     Future.microtask(
                       () => localeProvider.setLocale(const Locale('fr')),
                     );
@@ -1566,85 +1842,209 @@ class NotesScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _showNoteDialog(
-    BuildContext context,
-    NotesProvider notesProvider,
-    Note? note,
-  ) async {
+  void _openNote(BuildContext context, Note note) {
+    // Open the appropriate screen based on note type
+    if (note.noteType == NoteType.word) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => WordNoteEditScreen(note: note),
+        ),
+      );
+    } else {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => NoteEditScreen(note: note),
+        ),
+      );
+    }
+  }
+
+  void _showNoteTypeSelector(BuildContext context) {
+    final localeProvider = context.read<LocaleProvider>();
+    final loc = AppLocalizations.fromLocale(localeProvider.locale);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final result = await showDialog(
+
+    showModalBottomSheet(
       context: context,
-      builder: (_) => NoteDialog(note: note),
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1a1035) : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Handle bar
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white24 : Colors.black12,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // Title
+                ShaderMask(
+                  shaderCallback: (bounds) => const LinearGradient(
+                    colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                  ).createShader(bounds),
+                  child: Text(
+                    loc.t('create_note_type'),
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                // Standard Note Option
+                _buildNoteTypeOption(
+                  context: context,
+                  icon: Icons.note_add_rounded,
+                  title: loc.t('standard_note'),
+                  description: loc.t('standard_note_desc'),
+                  isDark: isDark,
+                  colors: [const Color(0xFF667eea), const Color(0xFF764ba2)],
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const NoteEditScreen(note: null),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+                // Word Note Option
+                _buildNoteTypeOption(
+                  context: context,
+                  icon: Icons.description_rounded,
+                  title: loc.t('word_note'),
+                  description: loc.t('word_note_desc'),
+                  isDark: isDark,
+                  colors: [const Color(0xFF11998e), const Color(0xFF38ef7d)],
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const WordNoteEditScreen(note: null),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
+  }
 
-    if (result == null) return;
+  Widget _buildNoteTypeOption({
+    required BuildContext context,
+    required IconData icon,
+    required String title,
+    required String description,
+    required bool isDark,
+    required List<Color> colors,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: colors[0].withValues(alpha: 0.3),
+              width: 2,
+            ),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                colors[0].withValues(alpha: isDark ? 0.15 : 0.08),
+                colors[1].withValues(alpha: isDark ? 0.1 : 0.05),
+              ],
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: colors),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: colors[0].withValues(alpha: 0.4),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Icon(icon, color: Colors.white, size: 28),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      description,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? Colors.white60 : Colors.black54,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                color: colors[0],
+                size: 20,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-    String title = '';
-    String content = '';
-
-    try {
-      if (result is Map) {
-        title = (result['title'] ?? '') as String;
-        content = (result['content'] ?? '') as String;
-      } else {
-        try {
-          title = (result.title ?? '') as String;
-          content = (result.content ?? '') as String;
-        } catch (_) {
-          try {
-            title = result.$1 as String;
-            content = result.$2 as String;
-          } catch (_) {
-            return;
-          }
-        }
-      }
-    } catch (_) {
-      return;
+  // Get preview text for Word Note - uses pages if available, otherwise content
+  String _getWordNotePreview(Note note) {
+    // First try to use pages
+    if (note.pages.isNotEmpty && note.pages.first.trim().isNotEmpty) {
+      return note.pages.first.trim();
     }
-
-    if (title.isEmpty && content.isEmpty) return;
-    if (!context.mounted) return;
-
-    final user = context.read<AuthProvider>().currentUser;
-    final userId = user?.id ?? '';
-
-    try {
-      if (note == null) {
-        await notesProvider.addNote(title: title, content: content);
-        if (context.mounted) {
-          _showGradientSnackBar(
-            context,
-            'تمت إضافة الملاحظة بنجاح',
-            isDark,
-            isError: false,
-          );
-        }
-      } else {
-        await notesProvider.updateNote(
-          id: note.id,
-          title: title,
-          content: content,
-          userId: userId,
-        );
-        if (context.mounted) {
-          _showGradientSnackBar(
-            context,
-            'تم تحديث الملاحظة بنجاح',
-            isDark,
-            isError: false,
-          );
-        }
-      }
-    } catch (e) {
-      if (context.mounted) {
-        _showGradientSnackBar(
-          context,
-          'خطأ: ${e.toString()}',
-          isDark,
-          isError: true,
-        );
-      }
+    // Fallback to content (for old Word Notes without pages)
+    if (note.content.isNotEmpty) {
+      // Remove page break markers if present
+      final cleanContent = note.content
+          .replaceAll('--- Page Break ---', '')
+          .trim();
+      return cleanContent.isNotEmpty ? cleanContent : 'ملاحظة فارغة';
     }
+    return 'ملاحظة فارغة';
   }
 }

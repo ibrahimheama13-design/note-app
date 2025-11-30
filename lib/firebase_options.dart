@@ -60,20 +60,20 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyBQynCkVyB4d5CHSX6SQWR1Ar6r5eEUScU',
-    appId: '1:117438888485:ios:c2b148599b328382c09dcc',
+    appId: '1:117438888485:ios:ae25476985de1bdec09dcc',
     messagingSenderId: '117438888485',
     projectId: 'note-app-532f0',
     storageBucket: 'note-app-532f0.firebasestorage.app',
-    iosBundleId: 'com.example.noteApp',
+    iosBundleId: 'com.yourname.notes',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyBQynCkVyB4d5CHSX6SQWR1Ar6r5eEUScU',
-    appId: '1:117438888485:ios:c2b148599b328382c09dcc',
+    appId: '1:117438888485:ios:ae25476985de1bdec09dcc',
     messagingSenderId: '117438888485',
     projectId: 'note-app-532f0',
     storageBucket: 'note-app-532f0.firebasestorage.app',
-    iosBundleId: 'com.example.noteApp',
+    iosBundleId: 'com.yourname.notes',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(

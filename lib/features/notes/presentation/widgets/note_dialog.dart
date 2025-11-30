@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/providers/locale_provider.dart';
 import '../../domain/entities/note.dart';
 
 class NoteDialog extends StatefulWidget {
@@ -18,6 +20,8 @@ class _NoteDialogState extends State<NoteDialog>
   late final TextEditingController _contentController;
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
+  late AppLocalizations _loc;
+  late bool _isDark;
 
   @override
   void initState() {
@@ -41,6 +45,15 @@ class _NoteDialogState extends State<NoteDialog>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Cache locale and theme to avoid deactivated widget exception
+    final localeProvider = context.read<LocaleProvider>();
+    _loc = AppLocalizations.fromLocale(localeProvider.locale);
+    _isDark = Theme.of(context).brightness == Brightness.dark;
+  }
+
+  @override
   void dispose() {
     _titleController.dispose();
     _contentController.dispose();
@@ -50,8 +63,8 @@ class _NoteDialogState extends State<NoteDialog>
 
   @override
   Widget build(BuildContext context) {
-    final loc = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final loc = _loc;
+    final isDark = _isDark;
 
     return ScaleTransition(
       scale: _scaleAnimation,

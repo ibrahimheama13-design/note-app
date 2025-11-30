@@ -8,6 +8,7 @@ import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../domain/entities/note.dart';
 import '../providers/notes_provider.dart';
 import '../widgets/note_dialog.dart';
+import 'word_note_edit_screen.dart';
 
 class NotesScreen extends StatelessWidget {
   const NotesScreen({super.key});
@@ -144,6 +145,8 @@ class NotesScreen extends StatelessWidget {
               final note = notes[index];
               final isDark = Theme.of(context).brightness == Brightness.dark;
               final noteNumber = index + 1;
+              // Check if Word Note by noteType OR if it has pages (for backwards compatibility)
+              final isWordNote = note.noteType == NoteType.word || note.pages.isNotEmpty;
 
               return Dismissible(
                 key: Key(note.id),
@@ -204,29 +207,47 @@ class NotesScreen extends StatelessWidget {
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: isDark
-                          ? [
-                              const Color(0xFF667eea).withValues(alpha: 0.15),
-                              const Color(0xFF764ba2).withValues(alpha: 0.15),
-                              const Color(0xFF8e44ad).withValues(alpha: 0.12),
-                            ]
-                          : [
-                              const Color(0xFF667eea).withValues(alpha: 0.08),
-                              const Color(0xFF764ba2).withValues(alpha: 0.08),
-                              const Color(0xFFf093fb).withValues(alpha: 0.08),
-                            ],
+                      colors: isWordNote
+                          ? (isDark
+                              ? [
+                                  const Color(0xFF4CAF50).withValues(alpha: 0.15),
+                                  const Color(0xFF2E7D32).withValues(alpha: 0.15),
+                                  const Color(0xFF1B5E20).withValues(alpha: 0.12),
+                                ]
+                              : [
+                                  const Color(0xFF4CAF50).withValues(alpha: 0.08),
+                                  const Color(0xFF66BB6A).withValues(alpha: 0.08),
+                                  const Color(0xFF81C784).withValues(alpha: 0.08),
+                                ])
+                          : (isDark
+                              ? [
+                                  const Color(0xFF667eea).withValues(alpha: 0.15),
+                                  const Color(0xFF764ba2).withValues(alpha: 0.15),
+                                  const Color(0xFF8e44ad).withValues(alpha: 0.12),
+                                ]
+                              : [
+                                  const Color(0xFF667eea).withValues(alpha: 0.08),
+                                  const Color(0xFF764ba2).withValues(alpha: 0.08),
+                                  const Color(0xFFf093fb).withValues(alpha: 0.08),
+                                ]),
                     ),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
                       width: 3,
-                      color: isDark
-                          ? const Color(0xFF667eea).withValues(alpha: 0.4)
-                          : const Color(0xFF667eea).withValues(alpha: 0.3),
+                      color: isWordNote
+                          ? (isDark
+                              ? const Color(0xFF4CAF50).withValues(alpha: 0.4)
+                              : const Color(0xFF4CAF50).withValues(alpha: 0.3))
+                          : (isDark
+                              ? const Color(0xFF667eea).withValues(alpha: 0.4)
+                              : const Color(0xFF667eea).withValues(alpha: 0.3)),
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: (isDark ? Colors.purple : Colors.blue)
-                            .withValues(alpha: 0.2),
+                        color: isWordNote
+                            ? Colors.green.withValues(alpha: 0.2)
+                            : (isDark ? Colors.purple : Colors.blue)
+                                .withValues(alpha: 0.2),
                         blurRadius: 12,
                         offset: const Offset(0, 4),
                       ),
@@ -234,7 +255,7 @@ class NotesScreen extends StatelessWidget {
                   ),
                   child: Stack(
                     children: [
-                      // Note number badge
+                      // Note type badge (Word or Standard)
                       Positioned(
                         top: 12,
                         left: 12,
@@ -245,36 +266,50 @@ class NotesScreen extends StatelessWidget {
                             gradient: LinearGradient(
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
-                              colors: isDark
+                              colors: isWordNote
                                   ? [
-                                      const Color(0xFF667eea),
-                                      const Color(0xFF764ba2),
-                                      const Color(0xFF8e44ad),
+                                      const Color(0xFF4CAF50),
+                                      const Color(0xFF2E7D32),
+                                      const Color(0xFF1B5E20),
                                     ]
-                                  : [
-                                      const Color(0xFF667eea),
-                                      const Color(0xFF764ba2),
-                                      const Color(0xFFf093fb),
-                                    ],
+                                  : (isDark
+                                      ? [
+                                          const Color(0xFF667eea),
+                                          const Color(0xFF764ba2),
+                                          const Color(0xFF8e44ad),
+                                        ]
+                                      : [
+                                          const Color(0xFF667eea),
+                                          const Color(0xFF764ba2),
+                                          const Color(0xFFf093fb),
+                                        ]),
                             ),
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.purple.withValues(alpha: 0.4),
+                                color: isWordNote
+                                    ? Colors.green.withValues(alpha: 0.4)
+                                    : Colors.purple.withValues(alpha: 0.4),
                                 blurRadius: 8,
                                 offset: const Offset(0, 2),
                               ),
                             ],
                           ),
                           child: Center(
-                            child: Text(
-                              '$noteNumber',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                            child: isWordNote
+                                ? const Icon(
+                                    Icons.description_rounded,
+                                    color: Colors.white,
+                                    size: 20,
+                                  )
+                                : Text(
+                                    '$noteNumber',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                           ),
                         ),
                       ),
@@ -288,37 +323,80 @@ class NotesScreen extends StatelessWidget {
                           bottom: 16,
                         ),
                         child: InkWell(
-                          onTap: () =>
-                              _showNoteDialog(context, notesProvider, note),
+                          onTap: () {
+                            if (isWordNote) {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => WordNoteEditScreen(note: note),
+                                ),
+                              );
+                            } else {
+                              _showNoteDialog(context, notesProvider, note);
+                            }
+                          },
                           borderRadius: BorderRadius.circular(20),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                note.title.isEmpty ? 'بدون عنوان' : note.title,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                  color: isDark
-                                      ? const Color(0xFFbb86fc)
-                                      : const Color(0xFF5e35b1),
-                                ),
-                              ),
-                              if (note.content.isNotEmpty) ...[
-                                const SizedBox(height: 8),
+                              // Word Note: Show content only (no separate title)
+                              if (isWordNote) ...[
+                                if (note.pages.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 8),
+                                    child: Text(
+                                      '${note.pages.length} ${note.pages.length == 1 ? 'صفحة' : 'صفحات'}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                        color: isDark
+                                            ? Colors.green.shade300
+                                            : Colors.green.shade700,
+                                      ),
+                                    ),
+                                  ),
+                                // Show content preview - use pages if available, otherwise use content
                                 Text(
-                                  note.content,
-                                  maxLines: 3,
+                                  _getWordNotePreview(note),
+                                  maxLines: 4,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontSize: 14,
-                                    height: 1.4,
+                                    height: 1.5,
                                     fontWeight: FontWeight.w500,
                                     color: isDark
-                                        ? const Color(0xFFffa726)
-                                        : const Color(0xFFf57c00),
+                                        ? const Color(0xFF81C784)
+                                        : const Color(0xFF2E7D32),
                                   ),
                                 ),
+                              ],
+                              // Regular Note: Show title + content
+                              if (!isWordNote) ...[
+                                Text(
+                                  note.title.isEmpty ? 'بدون عنوان' : note.title,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                    color: isDark
+                                        ? const Color(0xFFbb86fc)
+                                        : const Color(0xFF5e35b1),
+                                  ),
+                                ),
+                                if (note.content.isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    note.content,
+                                    maxLines: 3,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      height: 1.4,
+                                      fontWeight: FontWeight.w500,
+                                      color: isDark
+                                          ? const Color(0xFFffa726)
+                                          : const Color(0xFFf57c00),
+                                    ),
+                                  ),
+                                ],
                               ],
                               const SizedBox(height: 8),
                               Row(
@@ -326,17 +404,25 @@ class NotesScreen extends StatelessWidget {
                                   Icon(
                                     Icons.access_time_rounded,
                                     size: 14,
-                                    color: isDark
-                                        ? Colors.orange.shade300
-                                        : Colors.orange.shade700,
+                                    color: isWordNote
+                                        ? (isDark
+                                            ? Colors.green.shade300
+                                            : Colors.green.shade700)
+                                        : (isDark
+                                            ? Colors.orange.shade300
+                                            : Colors.orange.shade700),
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
                                     notesProvider.formatDate(note.date),
                                     style: TextStyle(
-                                      color: isDark
-                                          ? Colors.orange.shade300
-                                          : Colors.orange.shade700,
+                                      color: isWordNote
+                                          ? (isDark
+                                              ? Colors.green.shade300
+                                              : Colors.green.shade700)
+                                          : (isDark
+                                              ? Colors.orange.shade300
+                                              : Colors.orange.shade700),
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -413,16 +499,35 @@ class NotesScreen extends StatelessWidget {
     return result ?? false;
   }
 
+  // Get preview text for Word Note - uses pages if available, otherwise content
+  String _getWordNotePreview(Note note) {
+    // First try to use pages
+    if (note.pages.isNotEmpty && note.pages.first.trim().isNotEmpty) {
+      return note.pages.first.trim();
+    }
+    // Fallback to content (for old Word Notes without pages)
+    if (note.content.isNotEmpty) {
+      // Remove page break markers if present
+      final cleanContent = note.content
+          .replaceAll('--- Page Break ---', '')
+          .trim();
+      return cleanContent.isNotEmpty ? cleanContent : 'ملاحظة فارغة';
+    }
+    return 'ملاحظة فارغة';
+  }
+
   void _showSettingsSheet(BuildContext context) {
-    final loc = AppLocalizations.of(context);
+    // Capture providers BEFORE showing modal to avoid deactivated widget exception
+    final themeProvider = context.read<ThemeProvider>();
+    final localeProvider = context.read<LocaleProvider>();
+    final authProvider = context.read<AuthProvider>();
+    final loc = AppLocalizations.fromLocale(localeProvider.locale);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
-        final themeProvider = context.read<ThemeProvider>();
-        final localeProvider = context.read<LocaleProvider>();
         return Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -492,7 +597,11 @@ class NotesScreen extends StatelessWidget {
                     ),
                     trailing: Switch(
                       value: themeProvider.isDark,
-                      onChanged: (_) => themeProvider.toggleTheme(),
+                      onChanged: (_) {
+                        // Close bottom sheet before changing theme
+                        Navigator.of(context).popUntil((route) => route.isFirst);
+                        Future.microtask(() => themeProvider.toggleTheme());
+                      },
                       activeTrackColor: const Color(0xFF667eea),
                       activeThumbColor: Colors.white,
                     ),
@@ -578,8 +687,9 @@ class NotesScreen extends StatelessWidget {
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     onTap: () {
-                      Navigator.pop(ctx);
-                      context.read<AuthProvider>().signOut();
+                      // Close bottom sheet before signing out
+                      Navigator.of(context).popUntil((route) => route.isFirst);
+                      Future.microtask(() => authProvider.signOut());
                     },
                   ),
                 ),
@@ -596,7 +706,8 @@ class NotesScreen extends StatelessWidget {
     BuildContext context,
     LocaleProvider localeProvider,
   ) {
-    final loc = AppLocalizations.of(context);
+    // Capture values BEFORE showing modal to avoid deactivated widget exception
+    final loc = AppLocalizations.fromLocale(localeProvider.locale);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     showModalBottomSheet(
@@ -657,8 +768,11 @@ class NotesScreen extends StatelessWidget {
                   title: 'العربية',
                   icon: '🇸🇦',
                   onTap: () {
-                    localeProvider.setLocale(const Locale('ar'));
-                    Navigator.pop(ctx);
+                    // Close all bottom sheets before changing locale
+                    Navigator.of(context).popUntil((route) => route.isFirst);
+                    Future.microtask(
+                      () => localeProvider.setLocale(const Locale('ar')),
+                    );
                   },
                 ),
                 _buildLanguageOption(
@@ -668,8 +782,11 @@ class NotesScreen extends StatelessWidget {
                   title: 'English',
                   icon: '🇬🇧',
                   onTap: () {
-                    localeProvider.setLocale(const Locale('en'));
-                    Navigator.pop(ctx);
+                    // Close all bottom sheets before changing locale
+                    Navigator.of(context).popUntil((route) => route.isFirst);
+                    Future.microtask(
+                      () => localeProvider.setLocale(const Locale('en')),
+                    );
                   },
                 ),
                 _buildLanguageOption(
@@ -679,8 +796,11 @@ class NotesScreen extends StatelessWidget {
                   title: 'Français',
                   icon: '🇫🇷',
                   onTap: () {
-                    localeProvider.setLocale(const Locale('fr'));
-                    Navigator.pop(ctx);
+                    // Close all bottom sheets before changing locale
+                    Navigator.of(context).popUntil((route) => route.isFirst);
+                    Future.microtask(
+                      () => localeProvider.setLocale(const Locale('fr')),
+                    );
                   },
                 ),
                 const SizedBox(height: 16),

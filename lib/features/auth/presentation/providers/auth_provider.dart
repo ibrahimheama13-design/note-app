@@ -18,6 +18,11 @@ class AuthProvider extends ChangeNotifier {
   User? _currentUser;
   bool _isLoading = false;
   String? _errorMessage;
+  bool _isInitialized = false;
+
+  // StreamController to broadcast auth state changes
+  final StreamController<User?> _authStateController =
+      StreamController<User?>.broadcast();
 
   AuthProvider({
     required SignInWithEmailAndPassword signInWithEmailAndPassword,
@@ -34,22 +39,35 @@ class AuthProvider extends ChangeNotifier {
   StreamSubscription<User?>? _authSub;
 
   void _init() {
-    _authSub = _authRepository.authStateChanges.listen((user) {
-      _currentUser = user;
-      notifyListeners();
-    });
+    // Listen to the original stream and broadcast to our controller
+    _authSub = _authRepository.authStateChanges.listen(
+      (user) {
+        _currentUser = user;
+        _isInitialized = true;
+        _authStateController.add(user);
+        notifyListeners();
+      },
+      onError: (error) {
+        _authStateController.addError(error);
+      },
+    );
   }
 
   @override
   void dispose() {
     _authSub?.cancel();
+    _authStateController.close();
     super.dispose();
   }
 
   User? get currentUser => _currentUser;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
-  Stream<User?> get authStateChanges => _authRepository.authStateChanges;
+  bool get isInitialized => _isInitialized;
+
+  /// Returns a broadcast stream that can be listened to multiple times
+  /// This prevents issues with StreamBuilder recreating subscriptions
+  Stream<User?> get authStateChanges => _authStateController.stream;
 
   Future<void> signIn(String email, String password) async {
     _isLoading = true;

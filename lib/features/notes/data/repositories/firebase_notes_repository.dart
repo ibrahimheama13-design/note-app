@@ -43,6 +43,8 @@ class FirebaseNotesRepository implements NotesRepository {
       content: note.content,
       date: note.date,
       userId: userId,
+      noteType: note.noteType,
+      pages: note.pages,
     );
 
     await _notesCollection.add(noteModel.toMap());
@@ -62,6 +64,8 @@ class FirebaseNotesRepository implements NotesRepository {
       content: note.content,
       date: note.date,
       userId: userId,
+      noteType: note.noteType,
+      pages: note.pages,
     );
 
     await _notesCollection.doc(note.id).update(noteModel.toMap());

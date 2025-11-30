@@ -46,15 +46,17 @@ class _AuthScreenState extends State<AuthScreen> {
         );
       }
     } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _errorMessage = 'حدث خطأ غير متوقع';
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'حدث خطأ غير متوقع';
+        });
+      }
     } finally {
-      if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 

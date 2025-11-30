@@ -24,7 +24,12 @@ class NotesProvider extends ChangeNotifier {
 
   Stream<List<Note>> get notesStream => _getAllNotes();
 
-  Future<void> addNote({required String title, required String content}) async {
+  Future<void> addNote({
+    required String title,
+    required String content,
+    NoteType noteType = NoteType.standard,
+    List<String> pages = const [],
+  }) async {
     try {
       final note = Note(
         id: '', // Will be set by Firebase
@@ -32,6 +37,8 @@ class NotesProvider extends ChangeNotifier {
         content: content,
         date: DateTime.now(),
         userId: '', // Will be set by repository
+        noteType: noteType,
+        pages: pages,
       );
 
       await _addNote(note);
@@ -45,6 +52,8 @@ class NotesProvider extends ChangeNotifier {
     required String title,
     required String content,
     required String userId,
+    NoteType noteType = NoteType.standard,
+    List<String> pages = const [],
   }) async {
     try {
       final note = Note(
@@ -53,6 +62,8 @@ class NotesProvider extends ChangeNotifier {
         content: content,
         date: DateTime.now(),
         userId: userId,
+        noteType: noteType,
+        pages: pages,
       );
 
       await _updateNote(note);
